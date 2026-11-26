@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Secret Santa</title>
+<meta name="theme-color" content="#0b1f17">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Secret Santa">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+  :root{
+    --bg1:#0b1f17; --bg2:#14402c; --red:#c8102e; --red2:#e5323f;
+    --gold:#f2c14e; --cream:#fff8ec; --muted:rgba(255,248,236,.65);
+    --card:rgba(255,255,255,.07); --line:rgba(255,255,255,.14);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    color:var(--cream);
+    background:radial-gradient(ellipse at top,var(--bg2),var(--bg1) 70%) fixed;
+    background-color:var(--bg1);
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    overflow-x:hidden;
+  }
+  .snow{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+  .flake{position:absolute;top:-10px;background:#fff;border-radius:50%;animation:fall linear infinite}
+  @keyframes fall{to{transform:translate3d(var(--dx),105vh,0)}}
+  @media (prefers-reduced-motion:reduce){.snow{display:none}}
+
+  main{position:relative;z-index:1;max-width:520px;margin:0 auto;padding:20px 18px 40px}
+  .screen{display:none}
+  .screen.active{display:block;animation:fadeIn .35s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  header.top{text-align:center;padding:14px 0 6px}
+  .logo{font-size:44px;line-height:1}
+  h1{font-family:Georgia,"Times New Roman",serif;font-style:italic;font-weight:700;font-size:34px;margin:6px 0 2px;letter-spacing:.3px}
+  h1 span{color:var(--gold)}
+  .sub{color:var(--muted);font-size:15px;margin:0}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-top:16px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:1.4px;color:var(--gold);margin:0 0 12px;font-weight:700}
+  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 5px}
+  input,select{
+    width:100%;font:inherit;font-size:16px;color:var(--cream);
+    background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:12px;padding:12px 13px;outline:none;
+    -webkit-appearance:none;appearance:none;
+  }
+  input:focus,select:focus{border-color:var(--gold)}
+  input[type=date]{min-height:46px}
+  select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:30px}
+  .row{display:flex;gap:8px}
+  .row > *{flex:1}
+  .row > .shrink{flex:0 0 auto}
+
+  button{font:inherit;cursor:pointer;border:none}
+  .btn{display:block;width:100%;padding:15px;border-radius:14px;font-size:17px;font-weight:700;color:#fff;background:linear-gradient(180deg,var(--red2),var(--red));box-shadow:0 6px 18px rgba(200,16,46,.35);transition:transform .1s}
+  .btn:active{transform:scale(.98)}
+  .btn:disabled{opacity:.4;box-shadow:none}
+  .btn.gold{background:linear-gradient(180deg,#ffd76e,var(--gold));color:#3a2a00;box-shadow:0 6px 18px rgba(242,193,78,.3)}
+  .btn.ghost{background:transparent;border:1px solid var(--line);box-shadow:none;color:var(--cream);font-weight:600}
+  .btn + .btn{margin-top:10px}
+  .add{padding:0 18px;border-radius:12px;background:var(--gold);color:#3a2a00;font-weight:800;font-size:22px}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .chip{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:1px solid var(--line);border-radius:999px;padding:7px 8px 7px 13px;font-size:15px}
+  .chip button{width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.3);color:var(--cream);font-size:13px;line-height:22px;padding:0}
+  .hint{font-size:13px;color:var(--muted);margin:10px 0 0}
+  .count{float:right;color:var(--cream);font-weight:600;letter-spacing:0;text-transform:none}
+
+  .pairs{margin-top:10px}
+  .pair{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:10px;background:rgba(0,0,0,.2);margin-top:6px;font-size:15px}
+  .pair button{background:none;color:var(--muted);font-size:18px;padding:0 4px}
+
+  .info{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:10px}
+  .pill{background:rgba(242,193,78,.14);color:var(--gold);border:1px solid rgba(242,193,78,.35);border-radius:999px;padding:5px 12px;font-size:14px;font-weight:600}
+
+  .tabs{display:flex;background:rgba(0,0,0,.25);border-radius:14px;padding:4px;margin-top:18px}
+  .tabs button{flex:1;padding:11px 6px;border-radius:11px;background:none;color:var(--muted);font-weight:600;font-size:15px}
+  .tabs button.on{background:var(--cream);color:var(--bg1)}
+
+  .list .item{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .list .item:last-child{border-bottom:none}
+  .avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;flex:0 0 auto;font-size:16px}
+  .item .nm{flex:1;font-size:16px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .item .st{font-size:12px;color:var(--muted);font-weight:400;display:block}
+  .item .x{background:none;color:var(--muted);font-size:18px;padding:4px 6px}
+  .small.wa{background:#25d366;color:#04361c}
+  .small{padding:9px 14px;border-radius:10px;font-weight:700;font-size:14px;background:var(--red);color:#fff}
+  .small.done{background:rgba(255,255,255,.12);color:var(--cream)}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .tile{position:relative;background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:16px;padding:16px 10px;text-align:center;color:var(--cream);font-size:16px;font-weight:600}
+  .tile .avatar{margin:0 auto 8px;width:46px;height:46px;font-size:19px}
+  .tile.seen{opacity:.5}
+  .tile.seen::after{content:"✓";position:absolute;top:8px;right:10px;color:var(--gold);font-weight:900}
+
+  /* Reveal */
+  #reveal{text-align:center;padding-top:10px}
+  #rvHello{font-family:Georgia,serif;font-style:italic;font-size:30px;margin:18px 0 6px}
+  #rvHint{color:var(--muted);margin:0 0 6px;font-size:15px;min-height:20px}
+  .stage{position:relative;height:290px;display:flex;align-items:center;justify-content:center}
+  .gift{position:relative;width:180px;height:175px;cursor:pointer;animation:wiggle 2.2s ease-in-out infinite;transition:opacity .4s .5s, transform .4s}
+  @keyframes wiggle{0%,70%,100%{transform:rotate(0)}76%{transform:rotate(-4deg)}82%{transform:rotate(4deg)}88%{transform:rotate(-3deg)}94%{transform:rotate(2deg)}}
+  .gift .base{position:absolute;bottom:0;left:12px;width:156px;height:118px;background:linear-gradient(90deg,#a50d26,var(--red) 40%,#a50d26);border-radius:6px 6px 10px 10px;box-shadow:0 18px 30px rgba(0,0,0,.4)}
+  .gift .base::before{content:"";position:absolute;top:0;bottom:0;left:50%;width:26px;transform:translateX(-50%);background:linear-gradient(90deg,#d9a630,var(--gold),#d9a630)}
+  .gift .lid{position:absolute;top:22px;left:0;width:180px;height:40px;background:linear-gradient(90deg,#b80f2a,var(--red2) 40%,#b80f2a);border-radius:8px;z-index:2;box-shadow:0 6px 10px rgba(0,0,0,.25);transition:transform .8s cubic-bezier(.2,.9,.3,1.2),opacity .6s .2s}
+  .gift .lid::before{content:"";position:absolute;top:0;bottom:0;left:50%;width:28px;transform:translateX(-50%);background:linear-gradient(90deg,#d9a630,var(--gold),#d9a630)}
+  .bow{position:absolute;left:50%;top:-30px;width:0;height:0}
+  .bow::before,.bow::after{content:"";position:absolute;top:0;width:44px;height:32px;border:9px solid var(--gold);border-radius:50% 50% 50% 50%/60% 60% 40% 40%}
+  .bow::before{right:0;transform:rotate(-25deg);transform-origin:right bottom}
+  .bow::after{left:0;transform:rotate(25deg);transform-origin:left bottom}
+  .gift.open{animation:none}
+  .gift.open .lid{transform:translate(70px,-170px) rotate(40deg);opacity:0}
+  .gift.gone{opacity:0;transform:scale(.6);pointer-events:none}
+
+  #rvCard{position:absolute;left:50%;top:50%;width:min(320px,86vw);transform:translate(-50%,-50%) scale(.2);opacity:0;pointer-events:none;
+    background:var(--cream);color:#2b1a0e;border-radius:20px;padding:26px 18px 24px;box-shadow:0 20px 50px rgba(0,0,0,.5);
+    transition:transform .6s cubic-bezier(.2,1.4,.4,1) .55s,opacity .3s .55s}
+  #rvCard.show{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto}
+  #rvCard::before{content:"";position:absolute;inset:8px;border:2px dashed rgba(200,16,46,.35);border-radius:14px;pointer-events:none}
+  #rvCard .lbl{font-size:14px;text-transform:uppercase;letter-spacing:2px;color:var(--red);font-weight:800}
+  #rvName{font-family:Georgia,serif;font-size:40px;font-weight:700;margin:10px 0 6px;word-break:break-word;line-height:1.1}
+  #rvCard .ev{font-size:14px;color:#6b5440}
+  #rvInfo{display:flex;flex-direction:column;gap:2px;margin-top:10px;font-size:15px;color:#2b1a0e;font-weight:600}
+  #rvActions{margin-top:8px;opacity:0;transition:opacity .4s 1.2s;pointer-events:none}
+  #rvActions.show{opacity:1;pointer-events:auto}
+  .linkish{background:none;color:var(--muted);text-decoration:underline;font-size:14px;margin-top:16px;padding:8px}
+
+  .confetti{position:fixed;inset:0;pointer-events:none;z-index:50;overflow:hidden}
+  .confetti i{position:absolute;top:-20px;width:9px;height:14px;border-radius:2px;animation:conf 2.8s ease-in forwards}
+  @keyframes conf{0%{transform:translate3d(0,0,0) rotate(0)}100%{transform:translate3d(var(--dx),110vh,0) rotate(var(--r))}}
+
+  /* Modal + toast */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:60;padding:20px}
+  .modal.open{display:flex}
+  .modal .box{background:#163a2a;border:1px solid var(--line);border-radius:20px;padding:20px;max-width:360px;width:100%;text-align:center;animation:fadeIn .25s}
+  .modal h3{margin:4px 0 8px;font-size:20px}
+  .modal p{color:var(--muted);margin:0 0 18px;font-size:15px;line-height:1.4}
+  .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--cream);color:var(--bg1);padding:12px 18px;border-radius:999px;font-weight:700;font-size:15px;opacity:0;transition:.3s;z-index:70;pointer-events:none;white-space:nowrap}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .err{color:#ffb3b3;font-size:14px;margin-top:10px;text-align:center;min-height:18px}
+</style>
+</head>
+<body>
+<div class="snow" id="snow"></div>
+
+<main>
+  <!-- ========== PODEŠAVANJE ========== -->
+  <section class="screen" id="setup">
+    <header class="top">
+      <div class="logo">🎅</div>
+      <h1>Secret <span>Santa</span></h1>
+      <p class="sub">Unesi učesnike i izvuci tajne parove</p>
+    </header>
+
+    <div class="card">
+      <h2>Događaj</h2>
+      <label for="evName">Naziv</label>
+      <input id="evName" maxlength="40" placeholder="npr. Secret Santa 2026">
+      <div class="row">
+        <div>
+          <label for="evBudget">Budžet poklona</label>
+          <input id="evBudget" maxlength="20" placeholder="npr. 2.000 din">
+        </div>
+        <div>
+          <label for="evDate">Datum razmene</label>
+          <input id="evDate" type="date">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Učesnici <span class="count" id="pCount"></span></h2>
+      <label for="pName">Ime i prezime (bez š, č, ć, đ, ž)</label>
+      <input id="pName" maxlength="40" placeholder="npr. Milan Pavlovic" enterkeyhint="next" autocomplete="off" autocapitalize="words" spellcheck="false">
+      <label for="pPhone">Broj telefona (WhatsApp)</label>
+      <div class="row">
+        <input id="pPhone" maxlength="12" placeholder="3816xxxxxxxx" inputmode="numeric" enterkeyhint="done" autocomplete="off">
+        <button class="add shrink" id="pAdd" aria-label="Dodaj">+</button>
+      </div>
+      <div class="err" id="pErr" style="text-align:left"></div>
+      <div class="list" id="people"></div>
+      <p class="hint" id="pHint">Potrebna su najmanje 3 učesnika.</p>
+    </div>
+
+    <div class="card" id="exclCard">
+      <h2>Ne izvlače jedno drugo</h2>
+      <p class="hint" style="margin-top:0">Npr. muž i žena, ili ko je koga darivao prošle godine.</p>
+      <div class="row" style="margin-top:10px">
+        <select id="exA"></select>
+        <select id="exB"></select>
+        <button class="add shrink" id="exAdd" aria-label="Dodaj par">+</button>
+      </div>
+      <div class="pairs" id="pairs"></div>
+    </div>
+
+    <div style="margin-top:22px">
+      <button class="btn" id="drawBtn">🎁 IZVLAČENJE</button>
+      <div class="err" id="drawErr"></div>
+    </div>
+  </section>
+
+  <!-- ========== REZULTAT ========== -->
+  <section class="screen" id="results">
+    <header class="top">
+      <div class="logo">🎄</div>
+      <h1 id="resTitle">Secret Santa</h1>
+      <p class="sub">Parovi su izvučeni — niko ih ne zna, ni ti!</p>
+      <div class="info" id="resInfo"></div>
+    </header>
+
+    <div class="card">
+      <h2>Slanje na WhatsApp <span class="count" id="sentCount"></span></h2>
+      <p class="hint" style="margin:0 0 6px">Dodirni „Pošalji“: otvoriće se WhatsApp sa gotovom porukom i tajnim linkom za tog učesnika. Samo pritisni ➤ i vrati se ovde na sledećeg.</p>
+      <div class="list" id="linkList"></div>
+    </div>
+    <div style="margin-top:16px">
+      <button class="btn gold" id="sendNext">Pošalji sledećem ➤</button>
+    </div>
+
+    <div style="margin-top:22px">
+      <button class="btn ghost" id="newDraw">↺ Novo izvlačenje</button>
+    </div>
+  </section>
+
+  <!-- ========== OTKRIVANJE ========== -->
+  <section class="screen" id="reveal">
+    <div class="info" id="rvTop"></div>
+    <div id="rvHello">Zdravo!</div>
+    <p id="rvHint">Dodirni poklon da otkriješ koga daruješ</p>
+    <div class="stage">
+      <div class="gift" id="gift">
+        <div class="lid"><div class="bow"></div></div>
+        <div class="base"></div>
+      </div>
+      <div id="rvCard">
+        <div class="lbl">Ti daruješ</div>
+        <div id="rvName"></div>
+        <div class="ev" id="rvEv"></div>
+        <div id="rvInfo"></div>
+      </div>
+    </div>
+    <div id="rvActions"></div>
+    <div id="rvPre"></div>
+  </section>
+</main>
+
+<div class="modal" id="modal">
+  <div class="box">
+    <h3 id="mTitle"></h3>
+    <p id="mText"></p>
+    <button class="btn" id="mOk">U redu</button>
+    <button class="btn ghost" id="mCancel">Odustani</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const STORE = 'secret-santa-v2';
+  const COLORS = ['#c8102e','#1f8a5b','#d98a1c','#2f6fb5','#8e3fb0','#c2457a','#2a9d8f','#b5651d','#5a7d2a','#6c5ce7'];
+  const year = new Date().getFullYear();
+
+  // people: [{name:'Milan Pavlovic', phone:'381605873562'}]
+  // result: { 'ime davaoca': 'ime primaoca' }
+  let S = load() || { event:`Secret Santa ${year}`, budget:'', date:'', people:[], excl:[], result:null, sent:{} };
+
+  function load(){ try { return JSON.parse(localStorage.getItem(STORE)); } catch(e){ return null; } }
+  function save(){ try { localStorage.setItem(STORE, JSON.stringify(S)); } catch(e){} }
+
+  // ---------- Pomoćne ----------
+  const norm = s => s.trim().replace(/\s+/g,' ');
+  const same = (a,b) => a.toLowerCase() === b.toLowerCase();
+  const names = () => S.people.map(p => p.name);
+  function colorFor(name){ let h=0; for(const c of name) h=(h*31+c.codePointAt(0))>>>0; return COLORS[h%COLORS.length]; }
+  function initials(name){ return name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
+  function avatar(name){ const d=document.createElement('div'); d.className='avatar'; d.style.background=colorFor(name); d.textContent=initials(name); return d; }
+  function fmtDate(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${+d}.${+m}.${y}.`; }
+  function fmtPhone(p){ return '+' + p.slice(0,3) + ' ' + p.slice(3,5) + ' ' + p.slice(5); }
+  function el(tag, props={}, kids=[]){ const e=document.createElement(tag); Object.assign(e, props); kids.forEach(k=>e.append(k)); return e; }
+  function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active', s.id===id)); window.scrollTo(0,0); }
+
+  let toastT;
+  function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2400); }
+
+  function ask(title, text, okLabel, onOk, cancelLabel='Odustani'){
+    $('mTitle').textContent=title; $('mText').textContent=text;
+    $('mOk').textContent=okLabel; $('mCancel').textContent=cancelLabel;
+    $('mCancel').style.display = cancelLabel ? '' : 'none';
+    $('modal').classList.add('open');
+    $('mOk').onclick=()=>{ $('modal').classList.remove('open'); onOk && onOk(); };
+    $('mCancel').onclick=()=>$('modal').classList.remove('open');
+  }
+
+  // ---------- Ime i prezime: samo engleska latinica ----------
+  const TR = { 'Dž':'Dz','DŽ':'DZ','dž':'dz','Đ':'Dj','đ':'dj','Š':'S','š':'s','Č':'C','č':'c','Ć':'C','ć':'c','Ž':'Z','ž':'z' };
+  function toEnglishLatin(s){
+    return s.replace(/D[žŽ]|dž|[ĐđŠšČčĆćŽž]/g, m => TR[m] || m)
+            .replace(/[^A-Za-z \-]/g, '');            // sve ostalo (cifre, znaci, ćirilica...) se briše
+  }
+  const titleCase = s => s.toLowerCase().replace(/(^|[ \-])([a-z])/g, (m,a,b) => a + b.toUpperCase());
+  const NAME_OK = /^[A-Za-z]+(?:-[A-Za-z]+)*(?: [A-Za-z]+(?:-[A-Za-z]+)*)+$/;   // najmanje IME PREZIME
+
+  // ---------- Telefon: 3816… ----------
+  function cleanPhone(s){
+    let d = s.replace(/\D/g,'');
+    if (d.startsWith('00381')) d = d.slice(2);
+    else if (d.startsWith('06')) d = '381' + d.slice(1);   // 060… → 38160…
+    return d.slice(0,12);
+  }
+  const PHONE_OK = /^3816\d{7,8}$/;
+
+  // ---------- Šifrovanje linka (iz linka se ne vidi koga je ko izvukao) ----------
+  const KEYB = new TextEncoder().encode('Snesko Belic cuva tajnu 🎅');
+  function encode(obj){
+    const b = new TextEncoder().encode(JSON.stringify(obj));
+    let s=''; b.forEach((x,i)=>{ s+=String.fromCharCode(x ^ KEYB[i%KEYB.length] ^ ((i*37+11)&255)); });
+    return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  function decode(str){
+    const s = atob(str.replace(/-/g,'+').replace(/_/g,'/'));
+    const b = new Uint8Array(s.length);
+    for(let i=0;i<s.length;i++) b[i]=s.charCodeAt(i) ^ KEYB[i%KEYB.length] ^ ((i*37+11)&255);
+    return JSON.parse(new TextDecoder().decode(b));
+  }
+  function linkFor(giver){
+    return location.origin + location.pathname + '#s=' + encode({v:2, g:giver, r:S.result[giver], e:S.event, b:S.budget, d:S.date});
+  }
+
+  // ---------- Izvlačenje ----------
+  // Pravi se nasumična permutacija: svako izvlači tačno jednu osobu i svaku osobu izvlači tačno jedan učesnik.
+  // Niko ne izvlači sebe. Parovi NE moraju da budu uzajamni (ako Ivan izvuče Milana, Milan izvlači nekog drugog — ili slučajno Ivana).
+  function isExcluded(a,b){ return S.excl.some(([x,y])=>(x===a&&y===b)||(x===b&&y===a)); }
+  function draw(){
+    const P = names();
+    for(let attempt=0; attempt<20000; attempt++){
+      const r=[...P];
+      for(let i=r.length-1;i>0;i--){
+        const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i+1);
+        [r[i],r[j]]=[r[j],r[i]];
+      }
+      if(P.every((p,i)=>r[i]!==p && !isExcluded(p,r[i]))){
+        const res={}; P.forEach((p,i)=>res[p]=r[i]);
+        // dvostruka provera: svako je izvučen tačno jednom
+        if (new Set(Object.values(res)).size !== P.length) continue;
+        return res;
+      }
+    }
+    return null;
+  }
+
+  // ---------- Sneg i konfete ----------
+  (function snow(){
+    const box=$('snow');
+    for(let i=0;i<36;i++){
+      const f=document.createElement('i'); f.className='flake';
+      const size=2+Math.random()*5;
+      f.style.cssText=`left:${Math.random()*100}vw;width:${size}px;height:${size}px;opacity:${.25+Math.random()*.6};animation-duration:${7+Math.random()*9}s;animation-delay:-${Math.random()*16}s;--dx:${(Math.random()*60-30)}px`;
+      box.append(f);
+    }
+  })();
+  function confetti(){
+    const c=el('div',{className:'confetti'});
+    const cols=['#f2c14e','#e5323f','#ffffff','#2ecc71','#fff3b0'];
+    for(let i=0;i<70;i++){
+      const p=document.createElement('i');
+      p.style.cssText=`left:${Math.random()*100}vw;background:${cols[i%cols.length]};animation-delay:${Math.random()*.6}s;animation-duration:${2.2+Math.random()*1.6}s;--dx:${Math.random()*160-80}px;--r:${Math.random()*900-450}deg`;
+      c.append(p);
+    }
+    document.body.append(c); setTimeout(()=>c.remove(),4800);
+  }
+
+  // ---------- Ekran: unos ----------
+  function renderSetup(){
+    $('evName').value=S.event; $('evBudget').value=S.budget; $('evDate').value=S.date;
+    const list=$('people'); list.innerHTML='';
+    S.people.forEach(p=>{
+      const x=el('button',{className:'x',textContent:'✕',ariaLabel:'Ukloni '+p.name,onclick:()=>removePerson(p.name)});
+      const nm=el('div',{className:'nm'},[document.createTextNode(p.name), el('span',{className:'st',textContent:fmtPhone(p.phone)})]);
+      list.append(el('div',{className:'item'},[avatar(p.name), nm, x]));
+    });
+    $('pCount').textContent = S.people.length || '';
+    $('pHint').style.display = S.people.length<3 ? '' : 'none';
+    $('pHint').textContent = `Potrebna su najmanje 3 učesnika${S.people.length?` (još ${3-S.people.length})`:''}.`;
+
+    $('exclCard').style.display = S.people.length>=3 ? '' : 'none';
+    [$('exA'),$('exB')].forEach((sel,k)=>{
+      const prev=sel.value; sel.innerHTML='';
+      names().forEach(n=>sel.append(el('option',{value:n,textContent:n})));
+      if(names().includes(prev)) sel.value=prev; else if(names()[k]) sel.value=names()[k];
+    });
+    const pairs=$('pairs'); pairs.innerHTML='';
+    S.excl.forEach(([a,b],i)=>{
+      const x=el('button',{textContent:'✕',ariaLabel:'Ukloni par',onclick:()=>{S.excl.splice(i,1);save();renderSetup();}});
+      pairs.append(el('div',{className:'pair'},[el('span',{textContent:`${a}  ↔  ${b}`}), x]));
+    });
+    $('drawBtn').disabled = S.people.length<3;
+    $('drawErr').textContent='';
+  }
+
+  // dok se kuca: š→s, č→c… i brisanje nedozvoljenih znakova
+  $('pName').addEventListener('input', e=>{
+    const v=e.target.value, c=toEnglishLatin(v);
+    if(v!==c){ e.target.value=c; $('pErr').textContent='Koristi se samo engleska latinica (š→s, č/ć→c, đ→dj, ž→z, dž→dz).'; }
+  });
+  $('pPhone').addEventListener('input', e=>{ const c=cleanPhone(e.target.value); if(c!==e.target.value) e.target.value=c; });
+
+  function addPerson(){
+    $('pErr').textContent='';
+    const name = titleCase(norm(toEnglishLatin($('pName').value)).replace(/ ?- ?/g,'-'));
+    const phone = cleanPhone($('pPhone').value);
+    if(!NAME_OK.test(name)){ $('pErr').textContent='Unesi IME i PREZIME (npr. Milan Pavlovic).'; $('pName').focus(); return; }
+    if(!PHONE_OK.test(phone)){ $('pErr').textContent='Broj mora biti u formatu 3816… (npr. 381601234567).'; $('pPhone').focus(); return; }
+    if(S.people.some(p=>same(p.name,name))){ $('pErr').textContent=`${name} je već na spisku.`; return; }
+    const dup=S.people.find(p=>p.phone===phone);
+    if(dup){ $('pErr').textContent=`Taj broj je već unet za: ${dup.name}.`; return; }
+    S.people.push({name, phone});
+    $('pName').value=''; $('pPhone').value=''; save(); renderSetup(); $('pName').focus();
+  }
+  function removePerson(n){
+    S.people=S.people.filter(p=>p.name!==n);
+    S.excl=S.excl.filter(([a,b])=>a!==n&&b!==n);
+    save(); renderSetup();
+  }
+  $('pAdd').onclick=addPerson;
+  $('pName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); $('pPhone').focus(); }});
+  $('pPhone').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addPerson(); }});
+  $('evName').oninput=e=>{S.event=e.target.value;save();};
+  $('evBudget').oninput=e=>{S.budget=e.target.value;save();};
+  $('evDate').onchange=e=>{S.date=e.target.value;save();};
+  $('exAdd').onclick=()=>{
+    const a=$('exA').value,b=$('exB').value;
+    if(!a||!b||a===b){ toast('Izaberi dve različite osobe'); return; }
+    if(isExcluded(a,b)){ toast('Taj par je već dodat'); return; }
+    S.excl.push([a,b]); save(); renderSetup();
+  };
+  $('drawBtn').onclick=()=>{
+    ask('Pokreni izvlačenje?', `Izvlači se ${S.people.length} učesnika. Posle izvlačenja svakom šalješ link na WhatsApp.`, '🎁 IZVLAČENJE', ()=>{
+      S.event = norm(S.event) || `Secret Santa ${year}`;
+      S.budget = norm(S.budget);
+      const res=draw();
+      if(!res){ $('drawErr').textContent='Ne može da se izvuče sa ovim ograničenjima — ukloni neki par.'; return; }
+      S.result=res; S.sent={}; save();
+      confetti(); renderResults(); show('results');
+    });
+  };
+
+  // ---------- Ekran: slanje ----------
+  function infoPills(container, budget, date){
+    container.innerHTML='';
+    if(budget) container.append(el('span',{className:'pill',textContent:'💰 '+budget}));
+    if(date) container.append(el('span',{className:'pill',textContent:'📅 '+fmtDate(date)}));
+  }
+  function renderResults(){
+    $('resTitle').textContent=S.event;
+    infoPills($('resInfo'), S.budget, S.date);
+    const list=$('linkList'); list.innerHTML='';
+    let n=0;
+    S.people.forEach(p=>{
+      const sent=!!S.sent[p.name]; if(sent) n++;
+      const btn=el('button',{className:'small '+(sent?'done':'wa'),textContent:sent?'Ponovo':'Pošalji',onclick:()=>sendWhatsApp(p)});
+      const nm=el('div',{className:'nm'},[document.createTextNode(p.name), el('span',{className:'st',textContent:(sent?'✓ poslato · ':'')+fmtPhone(p.phone)})]);
+      list.append(el('div',{className:'item'},[avatar(p.name), nm, btn]));
+    });
+    $('sentCount').textContent = `${n}/${S.people.length}`;
+    const next=S.people.find(p=>!S.sent[p.name]);
+    $('sendNext').style.display = next ? '' : 'none';
+    $('sendNext').textContent = next ? `Pošalji sledećem: ${next.name} ➤` : '';
+  }
+  function sendWhatsApp(p){
+    const text =
+`🎅 Zdravo ${p.name}!
+
+Izvlačenje za „${S.event}“ je završeno.${S.budget?`\n💰 Budžet: ${S.budget}`:''}${S.date?`\n📅 Razmena poklona: ${fmtDate(S.date)}`:''}
+
+Otvori svoj link i odmotaj poklon da vidiš koga daruješ 🎁 (link je samo tvoj, ne prosleđuj ga):
+${linkFor(p.name)}`;
+    S.sent[p.name]=true; save(); renderResults();
+    window.open(`https://wa.me/${p.phone}?text=${encodeURIComponent(text)}`, '_blank');
+  }
+  $('sendNext').onclick=()=>{ const next=S.people.find(p=>!S.sent[p.name]); if(next) sendWhatsApp(next); };
+
+  $('newDraw').onclick=()=>ask('Novo izvlačenje?','Trenutni parovi će biti obrisani, a učesnici ostaju. Linkovi koji su već poslati i dalje bi prikazivali stare parove — zato ih posle pošalji svima ponovo.','Da, izvuci ponovo',()=>{
+    S.result=null; S.sent={}; save(); renderSetup(); show('setup');
+  });
+
+  // ---------- Ekran: otvaranje poklona ----------
+  function openReveal(giver, receiver, event, budget, date){
+    const gift=$('gift'), card=$('rvCard'), acts=$('rvActions');
+    gift.className='gift'; card.classList.remove('show'); acts.classList.remove('show'); acts.innerHTML='';
+    $('rvHello').textContent = `Zdravo, ${giver.split(' ')[0]}! 🎅`;
+    $('rvHint').textContent = 'Dodirni poklon da ga odmotaš';
+    $('rvName').textContent = receiver;
+    $('rvEv').textContent = event || '';
+    const info=$('rvInfo'); info.innerHTML='';
+    if(budget) info.append(el('div',{textContent:'💰 Budžet: '+budget}));
+    if(date) info.append(el('div',{textContent:'📅 Razmena: '+fmtDate(date)}));
+    acts.append(el('p',{className:'hint',textContent:'Psst… ne govori nikome! 🤫 Link možeš otvoriti ponovo kad god zatreba.'}));
+
+    gift.onclick=()=>{
+      if(gift.classList.contains('open')) return;
+      gift.classList.add('open');
+      if(navigator.vibrate) navigator.vibrate(40);
+      $('rvHint').textContent='';
+      setTimeout(()=>gift.classList.add('gone'),350);
+      card.classList.add('show'); acts.classList.add('show');
+      setTimeout(confetti,500);
+    };
+    show('reveal');
+  }
+
+  // ---------- Start ----------
+  function route(){
+    const m=location.hash.match(/^#s=([A-Za-z0-9_-]+)/);
+    if(m){
+      try{
+        const d=decode(m[1]);
+        if(!d.g||!d.r) throw 0;
+        openReveal(d.g,d.r,d.e,d.b,d.d);
+        return;
+      }catch(e){
+        renderSetup(); show('setup');
+        ask('Link nije ispravan','Možda nije ceo kopiran. Zamoli organizatora da ti ga pošalje ponovo.','U redu',null,'');
+        return;
+      }
+    }
+    if(S.result){ renderResults(); show('results'); }
+    else { renderSetup(); show('setup'); }
+  }
+  window.addEventListener('hashchange',route);
+  route();
+
+  if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+})();
+</script>
+</body>
+</html>
